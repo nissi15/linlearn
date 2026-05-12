@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Topic {
+  id          String      @id
+  name        String
+  description String
+  order       Int         @default(0)
+  lessons     Lesson[]
+  topicTests  TopicTest[]
+  createdAt   DateTime    @default(now())
+}
+
+model Lesson {
+  id              String           @id
+  topicId         String
+  topic           Topic            @relation(fields: [topicId], references: [id])
+  order           Int
+  title           String
+  explanation     String           @db.Text
+  example         String           @db.Text
+  taskPrompt      String           @db.Text
+  setupCommands   Json
+  successCriteria Json
+  createdAt       DateTime         @default(now())
+  progress        LessonProgress[]
+
+  @@index([topicId, order])
+}
+
+model LessonProgress {
+  id         String   @id @default(cuid())
+  lessonId   String
+  lesson     Lesson   @relation(fields: [lessonId], references: [id])
+  sandboxDir String   @default("")
+  step       String   @default("EXPLAIN")
+  confidence Int      @default(0)
+  attempts   Int      @default(0)
+  completed  Boolean  @default(false)
+  retryTask  Json?
+  turns      Turn[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([lessonId])
+}
+
+model Turn {
+  id         String         @id @default(cuid())
+  progressId String
+  progress   LessonProgress @relation(fields: [progressId], references: [id])
+  step       String
+  role       String
+  content    String         @db.Text
+  metadata   Json?
+  createdAt  DateTime       @default(now())
+
+  @@index([progressId, createdAt])
+}
+
+model TopicTest {
+  id         String   @id @default(cuid())
+  topicId    String
+  topic      Topic    @relation(fields: [topicId], references: [id])
+  confidence Int      @default(0)
+  passed     Boolean  @default(false)
+  signals    Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([topicId])
+}

@@ -1,65 +1,155 @@
-import Image from "next/image";
+import { prisma } from "@/lib/prisma";
+import { startTopicAction } from "./actions";
 
-export default function Home() {
+interface LessonWithProgress {
+  id: string;
+  title: string;
+  order: number;
+  progress: Array<{ completed: boolean; confidence: number }>;
+}
+
+function computeStatus(
+  progress: Array<{ completed: boolean; confidence: number }>
+): "completed" | "in-progress" | "locked" {
+  if (progress.some((p) => p.completed)) return "completed";
+  if (progress.some((p) => !p.completed)) return "in-progress";
+  return "locked";
+}
+
+function getConfidence(
+  progress: Array<{ completed: boolean; confidence: number }>
+): number {
+  const completed = progress.find((p) => p.completed);
+  return completed?.confidence ?? 0;
+}
+
+export default async function Home() {
+  const topics = await prisma.topic.findMany({
+    orderBy: { order: "asc" },
+    include: {
+      lessons: {
+        orderBy: { order: "asc" },
+        include: {
+          progress: {
+            select: { completed: true, confidence: true },
+          },
+        },
+      },
+    },
+  });
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen p-8">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-3xl font-bold text-[var(--accent)] mb-2">
+          Linux Tutor
+        </h1>
+        <p className="text-[var(--foreground)]/60 mb-8">
+          Master Linux concepts through guided lessons with hands-on practice.
+        </p>
+
+        <div className="space-y-6">
+          {topics.map((topic) => {
+            const completedCount = topic.lessons.filter((l) =>
+              l.progress.some((p) => p.completed)
+            ).length;
+            const hasInProgress = topic.lessons.some(
+              (l) => computeStatus(l.progress) === "in-progress"
+            );
+            const totalCount = topic.lessons.length;
+            const progressPct =
+              totalCount > 0
+                ? Math.round((completedCount / totalCount) * 100)
+                : 0;
+
+            return (
+              <div
+                key={topic.id}
+                className="bg-[var(--panel)] border border-[var(--border)] rounded-xl p-6"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-[var(--foreground)]">
+                      {topic.name}
+                    </h2>
+                    <p className="text-sm text-[var(--foreground)]/60 mt-1">
+                      {topic.description}
+                    </p>
+                  </div>
+                  <span className="text-xs text-[var(--foreground)]/40 font-mono shrink-0 ml-4">
+                    {completedCount}/{totalCount}
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full h-1.5 bg-[var(--border)] rounded-full mb-4">
+                  <div
+                    className="h-full bg-[var(--success)] rounded-full transition-all"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+
+                {/* Lesson list */}
+                <div className="space-y-2 mb-4">
+                  {topic.lessons.map((lesson: LessonWithProgress) => {
+                    const status = computeStatus(lesson.progress);
+                    const conf = getConfidence(lesson.progress);
+
+                    return (
+                      <div
+                        key={lesson.id}
+                        className="flex items-center gap-3 text-sm"
+                      >
+                        {status === "completed" ? (
+                          <div className="w-4 h-4 rounded-full bg-[var(--success)] flex items-center justify-center shrink-0">
+                            <span className="text-[var(--background)] text-[10px] font-bold">
+                              &#10003;
+                            </span>
+                          </div>
+                        ) : status === "in-progress" ? (
+                          <div className="w-4 h-4 rounded-full bg-[var(--accent)] animate-pulse shrink-0" />
+                        ) : (
+                          <div className="w-4 h-4 rounded-full bg-[var(--border)] shrink-0" />
+                        )}
+                        <span
+                          className={
+                            status === "locked"
+                              ? "text-[var(--foreground)]/40"
+                              : "text-[var(--foreground)]"
+                          }
+                        >
+                          {lesson.title}
+                        </span>
+                        {status === "completed" && (
+                          <span className="text-xs text-[var(--success)]/70 ml-auto">
+                            {conf}/10
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Start / Continue button */}
+                <form action={startTopicAction}>
+                  <input type="hidden" name="topicId" value={topic.id} />
+                  <button
+                    type="submit"
+                    className="bg-[var(--accent)] text-[var(--background)] font-semibold px-5 py-2 rounded-lg text-sm hover:bg-[var(--accent-dim)] transition-colors cursor-pointer"
+                  >
+                    {completedCount === totalCount
+                      ? "Review"
+                      : completedCount > 0 || hasInProgress
+                      ? "Continue"
+                      : "Start"}
+                    {" →"}
+                  </button>
+                </form>
+              </div>
+            );
+          })}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
