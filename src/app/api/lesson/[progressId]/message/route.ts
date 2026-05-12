@@ -1,3 +1,4 @@
+import { APIError } from "@anthropic-ai/sdk";
 import { advanceLesson } from "@/lib/orchestrator";
 
 export async function POST(
@@ -27,6 +28,19 @@ export async function POST(
     });
   } catch (error) {
     console.error("advanceLesson error:", error);
+
+    // Anthropic is sometimes momentarily overloaded (429 / 529) — tell the
+    // student it's temporary so they just retry.
+    if (
+      error instanceof APIError &&
+      (error.status === 429 || error.status === 529)
+    ) {
+      return Response.json(
+        { error: "The tutor is busy right now — give it a few seconds and send that again." },
+        { status: 503 }
+      );
+    }
+
     return Response.json(
       { error: "Failed to advance lesson. Please try again." },
       { status: 500 }

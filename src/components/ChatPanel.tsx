@@ -87,7 +87,19 @@ export default function ChatPanel({
         body: JSON.stringify({ message: trimmed }),
       });
 
-      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        onAppendTurn({
+          id: `error-${Date.now()}`,
+          role: "tutor",
+          content:
+            data?.error ?? "Something went wrong sending that — try again.",
+          step: "TASK",
+        });
+        return;
+      }
 
       const result = (await res.json()) as AdvanceResult;
 
@@ -106,7 +118,7 @@ export default function ChatPanel({
       onAppendTurn({
         id: `error-${Date.now()}`,
         role: "tutor",
-        content: "Sorry, that message did not send. Please try again.",
+        content: "Couldn't reach the server — check your connection and try again.",
         step: "TASK",
       });
     } finally {

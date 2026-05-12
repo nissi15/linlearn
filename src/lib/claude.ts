@@ -1,25 +1,52 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic, { APIError } from "@anthropic-ai/sdk";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
+  // Anthropic occasionally returns 429 / 529 ("Overloaded"); the SDK retries
+  // these with exponential backoff. Give it a few more shots than the default.
+  maxRetries: 5,
+  timeout: 60_000,
 });
 
 const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** True for transient Anthropic errors worth one more local retry. */
+function isTransient(err: unknown): boolean {
+  if (err instanceof APIError) {
+    return (
+      err.status === 429 ||
+      err.status === 529 ||
+      (typeof err.status === "number" && err.status >= 500)
+    );
+  }
+  return false;
+}
 
 export async function askClaude(
   systemPrompt: string,
   userMessage: string
 ): Promise<string> {
-  const response = await client.messages.create({
-    model,
-    max_tokens: 2048,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userMessage }],
-  });
-
-  const block = response.content[0];
-  if (block.type === "text") return block.text;
-  return "";
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await client.messages.create({
+        model,
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userMessage }],
+      });
+      const block = response.content[0];
+      if (block && block.type === "text") return block.text;
+      return "";
+    } catch (err) {
+      lastError = err;
+      if (!isTransient(err) || attempt === 2) throw err;
+      await sleep(1500 * (attempt + 1));
+    }
+  }
+  throw lastError;
 }
 
 export async function askClaudeJSON<T>(
