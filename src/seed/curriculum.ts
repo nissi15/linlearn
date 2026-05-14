@@ -426,4 +426,220 @@ Hints:
       },
     ],
   },
+  {
+    id: "vi_vim",
+    name: "Vi / Vim",
+    description:
+      "Selecting regions with visual mode, backward search, and the last-line command mode — picking up where the ALU lesson left off.",
+    order: 2,
+    lessons: [
+      {
+        id: "vi_1_visual_mode",
+        order: 1,
+        title: "Visual Mode — selecting regions",
+        explanation: `You already know \`x\` deletes a character, \`dd\` deletes a line, \`yy\` copies a line. But what about *part* of a line, or several lines, or a rectangular block? That's what **visual mode** is for: highlight first, act second.
+
+From Normal mode there are three flavours:
+
+- \`v\` — **character-wise** selection. Extend with \`h j k l\`, \`w\` (next word), \`e\` (end of word), \`$\` (end of line), \`%\` (matching bracket), etc.
+- \`V\` (capital) — **line-wise** selection. Move up/down to grab whole lines.
+- \`Ctrl-v\` — **block** selection. A rectangle — great for editing columns.
+
+Once you've highlighted something, the usual operators work on the selection instead of a motion:
+
+- \`d\` — delete the selection
+- \`y\` — yank (copy) it
+- \`c\` — delete it *and* drop into Insert mode (change)
+- \`~\` — toggle the case of every selected character
+- \`>\` / \`<\` — indent / un-indent (handy for code)
+
+\`Esc\` cancels without doing anything.
+
+After a yank or delete, \`p\` in Normal mode pastes whatever's on the clipboard at the cursor — same as before.`,
+        example: `Say you've got this line and want to capitalise the company name:
+
+\`\`\`
+goodTaste delivers maize flour weekly.
+\`\`\`
+
+Land the cursor on the \`g\`, then:
+1. \`v\` — start a character-wise selection.
+2. \`e\` — extend to the end of \`goodTaste\`.
+3. \`c\` — change. The selection vanishes and you're in Insert mode.
+4. Type \`Good Taste\`, then \`Esc\`.
+
+Result: \`Good Taste delivers maize flour weekly.\`
+
+To delete a whole line with visual mode instead of \`dd\`:
+
+1. \`V\` (capital) — line-wise selection, the current line lights up.
+2. (Optionally move \`j\`/\`k\` to grab more lines.)
+3. \`d\` — gone.`,
+        taskPrompt: `A \`suppliers.txt\` file is open for editing (run \`vi suppliers.txt\` to open it). Use **visual mode** for both edits — no \`:%s\` shortcuts.
+
+1. On line 2 the word \`goodTaste\` should be \`Good Taste\`. Use \`v\` + \`e\` + \`c\` to change it (or similar).
+2. There's a line that begins with \`TODO:\` — use \`V\` to select the whole line, then \`d\` to delete it.
+
+Save and quit with \`:wq\`. The file should end up with 3 lines, no \`TODO:\` line, and \`Good Taste\` (capitalised, with a space) on line 2.`,
+        setupCommands: [
+          "printf '%s\\n' 'Rwandan suppliers list:' 'goodTaste in Kigali sells flour.' 'TODO: verify before pushing to StockTrace' 'Fair Food in Musanze sells maize.' > suppliers.txt",
+        ],
+        successCriteria: [
+          {
+            check_command: "wc -l < suppliers.txt | tr -d ' '",
+            expected_output: "3",
+            description:
+              "suppliers.txt has exactly 3 lines (TODO line removed)",
+          },
+          {
+            check_command: "grep -c 'Good Taste' suppliers.txt | tr -d ' '",
+            expected_output: "1",
+            description: "Line 2 now reads 'Good Taste' (capitalised, spaced)",
+          },
+          {
+            check_command: "grep -c '^TODO:' suppliers.txt | tr -d ' '",
+            expected_output: "0",
+            description: "The TODO line is gone",
+          },
+        ],
+      },
+      {
+        id: "vi_2_backward_search",
+        order: 2,
+        title: "Backward Search with `?`",
+        explanation: `You already know \`/pattern\` searches **forward** through the file. Its mirror is \`?pattern\` which searches **backward**.
+
+Both share \`n\` and \`N\`:
+
+- \`n\` — next match in the **same** direction as the original search.
+- \`N\` — next match in the **opposite** direction.
+
+So if you searched with \`?\`, then \`n\` keeps going backward and \`N\` flips forward.
+
+Two more shortcuts that come up constantly:
+
+- \`*\` — search **forward** for the word currently under the cursor (no typing needed).
+- \`#\` — search **backward** for the word under the cursor.
+
+When is \`?\` actually better than \`/\`? When the thing you want is **above** your cursor. Common case: you're at the bottom of a log file looking for the *last* \`FAILED\` line — \`?FAILED<Enter>\` jumps straight there. With \`/\` you'd either have to wrap around the file or hit \`n\` past every earlier match.`,
+        example: `Open a log, jump to the end, search backwards:
+
+\`\`\`
+vi procurement.log
+G                  " jump to the last line
+?FAILED<Enter>     " cursor jumps UP to the most recent FAILED entry
+n                  " keep going further back through earlier FAILED entries
+N                  " reverse — go forward again
+\`\`\`
+
+Tip: in last-line mode, your search history is shared between \`/\` and \`?\`. Press \`/\` and then \`Up Arrow\` to recall previous patterns regardless of which direction you used.`,
+        taskPrompt: `A long log file \`procurement.log\` is sitting in the sandbox. Open it with \`vi procurement.log\`.
+
+The cursor lands at the bottom (or jump there yourself with \`G\`). There are several lines starting with \`FAILED\`. Your task:
+
+1. Use **backward search** (\`?FAILED\`) to jump to the FAILED line closest to the bottom of the file.
+2. Delete just that one line with \`dd\`.
+3. Save and quit with \`:wq\`.
+
+Don't touch the other FAILED lines — there should still be three of them left when you're done.`,
+        setupCommands: [
+          "printf '%s\\n' 'OK supplier=A' 'OK supplier=B' 'FAILED supplier=C' 'OK supplier=D' 'FAILED supplier=E' 'OK supplier=F' 'FAILED supplier=G' 'OK supplier=H' 'FAILED supplier=I' 'OK supplier=J' > procurement.log",
+        ],
+        successCriteria: [
+          {
+            check_command: "wc -l < procurement.log | tr -d ' '",
+            expected_output: "9",
+            description: "procurement.log lost exactly one line",
+          },
+          {
+            check_command: "grep -c '^FAILED' procurement.log | tr -d ' '",
+            expected_output: "3",
+            description: "three FAILED lines remain (down from four)",
+          },
+          {
+            check_command:
+              "grep -c '^FAILED supplier=I' procurement.log | tr -d ' '",
+            expected_output: "0",
+            description:
+              "the last FAILED entry (supplier=I) is the one that got removed",
+          },
+        ],
+      },
+      {
+        id: "vi_3_command_mode",
+        order: 3,
+        title: "Last-Line (Command) Mode",
+        explanation: `When you press \`:\` in Normal mode the cursor jumps to the very bottom of the screen and you can type a **command by name**. This is *last-line mode* — older books call it *ex mode* or *command mode*. Same thing.
+
+You already use it for \`:w\`, \`:q\`, \`:wq\`, \`:q!\`, and \`:%s/old/new/g\`. Here are the ones worth knowing next:
+
+- \`:set number\` — show line numbers in the gutter. \`:set nonumber\` to turn off.
+- \`:e <filename>\` — open another file in the same vim session (\`Tab\` completes filenames).
+- \`:r <filename>\` — **read** another file's contents into the current buffer at the cursor.
+- \`:r !<command>\` — run a shell command and insert its **output** at the cursor. Cracking useful.
+- \`:!<command>\` — run a shell command and show its output, without inserting anything.
+- \`:help <topic>\` — open the built-in help. \`:q\` closes the help window.
+
+A few quality-of-life points:
+
+- Tab-completion works for filenames and commands (\`:e su<Tab>\` cycles through matches).
+- The \`Up Arrow\` recalls previous commands — your command history is persistent.
+- Many commands take a **range**: \`:5,10d\` deletes lines 5 through 10. \`:%\` means the whole file (that's what the \`%\` in \`:%s/.../...\` is).`,
+        example: `Inserting today's date as a new line, without leaving vim:
+
+\`\`\`
+G                 " jump to the bottom
+o                 " open a new line below in Insert mode
+<Esc>             " back to Normal
+:r !date<Enter>   " insert the output of \`date\` right where the cursor is
+\`\`\`
+
+Or peeking at another file without opening it:
+
+\`\`\`
+:!cat /etc/hostname    " runs the command, shows the output, returns you to vim
+\`\`\`
+
+Or pulling a list of files into the document you're editing:
+
+\`\`\`
+:r !ls -1 inventory/   " inserts each filename on its own line
+\`\`\``,
+        taskPrompt: `A file \`report.txt\` exists with a single header line. An \`inventory/\` directory next to it contains three CSV files.
+
+Your task — using **last-line mode**, no other tools:
+
+1. Open the file: \`vi report.txt\`.
+2. Move the cursor to the end of the file (\`G\` then \`$\`, or just \`G\`).
+3. Run \`:r !ls -1 inventory/\` to insert the list of inventory files **below** the header. (The \`-1\` forces one filename per line.)
+4. Save and quit with \`:wq\`.
+
+When you're done, \`report.txt\` should have the original header on line 1 and the three CSV filenames on lines 2, 3, 4.`,
+        setupCommands: [
+          "rm -rf inventory report.txt",
+          "mkdir -p inventory",
+          "touch inventory/beans.csv inventory/flour.csv inventory/maize.csv",
+          "printf '%s\\n' 'StockTrace inventory listing:' > report.txt",
+        ],
+        successCriteria: [
+          {
+            check_command: "wc -l < report.txt | tr -d ' '",
+            expected_output: "4",
+            description: "report.txt has 4 lines (header + 3 filenames)",
+          },
+          {
+            check_command: "head -1 report.txt",
+            expected_output: "StockTrace inventory listing:",
+            description: "the header is still on line 1",
+          },
+          {
+            check_command:
+              "grep -c '\\.csv$' report.txt | tr -d ' '",
+            expected_output: "3",
+            description: "three .csv filenames were inserted from inventory/",
+          },
+        ],
+      },
+    ],
+  },
 ];
