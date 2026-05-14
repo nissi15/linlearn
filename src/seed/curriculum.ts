@@ -430,213 +430,561 @@ Hints:
     id: "vi_vim",
     name: "Vi / Vim",
     description:
-      "Selecting regions with visual mode, backward search, and the last-line command mode — picking up where the ALU lesson left off.",
+      "Learn vi from scratch in tiny steps — open a file, type, save, move around, edit, search — then build your own StockTrace supplier ledger at the end.",
     order: 2,
     lessons: [
       {
-        id: "vi_1_visual_mode",
+        id: "vi_01_hello",
         order: 1,
-        title: "Visual Mode — selecting regions",
-        explanation: `You already know \`x\` deletes a character, \`dd\` deletes a line, \`yy\` copies a line. But what about *part* of a line, or several lines, or a rectangular block? That's what **visual mode** is for: highlight first, act second.
+        title: "Hello, vi — open, type, save, quit",
+        explanation: `Vi is a text editor that has been on every Unix machine since 1976. A guy called **Bill Joy** wrote it. Vim is just a newer, friendlier version (Vi IMproved) — when you type \`vi\` on Ubuntu, you usually get vim. They behave the same for everything in this topic.
 
-From Normal mode there are three flavours:
+Vi is a bit different from editors like Notepad or VS Code: most of the time you are **not typing text**. The keyboard is used to give *commands*. You only type text when you tell vi "now I want to type" by pressing \`i\`.
 
-- \`v\` — **character-wise** selection. Extend with \`h j k l\`, \`w\` (next word), \`e\` (end of word), \`$\` (end of line), \`%\` (matching bracket), etc.
-- \`V\` (capital) — **line-wise** selection. Move up/down to grab whole lines.
-- \`Ctrl-v\` — **block** selection. A rectangle — great for editing columns.
+Three keys are all you need for "open a file, type something, save, quit":
 
-Once you've highlighted something, the usual operators work on the selection instead of a motion:
+- \`vi filename\` — open the file (or create it if it doesn't exist).
+- \`i\` — start typing. (This is called **Insert mode**.)
+- \`Esc\` — stop typing. (Back to **Normal mode**, where keys do commands.)
+- \`:wq\` then Enter — **w**rite and **q**uit. Saves your changes and closes vi.
 
-- \`d\` — delete the selection
-- \`y\` — yank (copy) it
-- \`c\` — delete it *and* drop into Insert mode (change)
-- \`~\` — toggle the case of every selected character
-- \`>\` / \`<\` — indent / un-indent (handy for code)
-
-\`Esc\` cancels without doing anything.
-
-After a yank or delete, \`p\` in Normal mode pastes whatever's on the clipboard at the cursor — same as before.`,
-        example: `Say you've got this line and want to capitalise the company name:
-
-\`\`\`
-goodTaste delivers maize flour weekly.
+That's it. The rest of the lessons each add one or two more keys at a time.`,
+        example: `\`\`\`
+vi hello.txt          # opens (or creates) the file
+i                     # start typing
+Hello from Kigali     # actually type this
+<Esc>                 # stop typing
+:wq                   # save and quit (press Enter after)
 \`\`\`
 
-Land the cursor on the \`g\`, then:
-1. \`v\` — start a character-wise selection.
-2. \`e\` — extend to the end of \`goodTaste\`.
-3. \`c\` — change. The selection vanishes and you're in Insert mode.
-4. Type \`Good Taste\`, then \`Esc\`.
+After this, run \`cat hello.txt\` in the terminal — the line you typed will be there.`,
+        taskPrompt: `In the terminal, open a new file with \`vi hello.txt\`. Once vi opens:
 
-Result: \`Good Taste delivers maize flour weekly.\`
+1. Press \`i\` to start typing.
+2. Type exactly: \`Hello from Kigali\`
+3. Press \`Esc\`.
+4. Type \`:wq\` and press Enter.
 
-To delete a whole line with visual mode instead of \`dd\`:
-
-1. \`V\` (capital) — line-wise selection, the current line lights up.
-2. (Optionally move \`j\`/\`k\` to grab more lines.)
-3. \`d\` — gone.`,
-        taskPrompt: `A \`suppliers.txt\` file is open for editing (run \`vi suppliers.txt\` to open it). Use **visual mode** for both edits — no \`:%s\` shortcuts.
-
-1. On line 2 the word \`goodTaste\` should be \`Good Taste\`. Use \`v\` + \`e\` + \`c\` to change it (or similar).
-2. There's a line that begins with \`TODO:\` — use \`V\` to select the whole line, then \`d\` to delete it.
-
-Save and quit with \`:wq\`. The file should end up with 3 lines, no \`TODO:\` line, and \`Good Taste\` (capitalised, with a space) on line 2.`,
+You should be back at the shell prompt. Then type **done**.`,
         setupCommands: [
-          "printf '%s\\n' 'Rwandan suppliers list:' 'goodTaste in Kigali sells flour.' 'TODO: verify before pushing to StockTrace' 'Fair Food in Musanze sells maize.' > suppliers.txt",
+          "rm -f hello.txt",
         ],
         successCriteria: [
           {
-            check_command: "wc -l < suppliers.txt | tr -d ' '",
-            expected_output: "3",
-            description:
-              "suppliers.txt has exactly 3 lines (TODO line removed)",
+            check_command: "test -f hello.txt && echo yes",
+            expected_output: "yes",
+            description: "hello.txt was created",
           },
           {
-            check_command: "grep -c 'Good Taste' suppliers.txt | tr -d ' '",
+            check_command: "grep -c '^Hello from Kigali$' hello.txt | tr -d ' '",
             expected_output: "1",
-            description: "Line 2 now reads 'Good Taste' (capitalised, spaced)",
-          },
-          {
-            check_command: "grep -c '^TODO:' suppliers.txt | tr -d ' '",
-            expected_output: "0",
-            description: "The TODO line is gone",
+            description: "hello.txt contains exactly the line 'Hello from Kigali'",
           },
         ],
       },
       {
-        id: "vi_2_backward_search",
+        id: "vi_02_modes",
         order: 2,
-        title: "Backward Search with `?`",
-        explanation: `You already know \`/pattern\` searches **forward** through the file. Its mirror is \`?pattern\` which searches **backward**.
+        title: "Two modes — Normal and Insert",
+        explanation: `Vi has two modes you'll spend most of your time in:
 
-Both share \`n\` and \`N\`:
+- **Normal mode** — what you start in when you open vi. Letters are **commands**, not text. \`h\` moves left, \`x\` deletes, and so on.
+- **Insert mode** — you can type text like in a normal editor. To get here, press \`i\`.
 
-- \`n\` — next match in the **same** direction as the original search.
-- \`N\` — next match in the **opposite** direction.
+To switch between them:
 
-So if you searched with \`?\`, then \`n\` keeps going backward and \`N\` flips forward.
+- \`i\` — from Normal into Insert (start typing where the cursor is).
+- \`Esc\` — from Insert back to Normal.
 
-Two more shortcuts that come up constantly:
+There's another handy way into Insert mode:
 
-- \`*\` — search **forward** for the word currently under the cursor (no typing needed).
-- \`#\` — search **backward** for the word under the cursor.
+- \`o\` — **o**pen a new line *below* the current one and start typing on it.
 
-When is \`?\` actually better than \`/\`? When the thing you want is **above** your cursor. Common case: you're at the bottom of a log file looking for the *last* \`FAILED\` line — \`?FAILED<Enter>\` jumps straight there. With \`/\` you'd either have to wrap around the file or hit \`n\` past every earlier match.`,
-        example: `Open a log, jump to the end, search backwards:
-
+If you ever get confused about which mode you're in, just press \`Esc\` once or twice. You're now in Normal mode for sure.`,
+        example: `\`\`\`
+vi notes.txt
+i                     # Insert mode
+First line            # type
+<Esc>                 # Normal mode
+o                     # new line below, automatically in Insert mode
+Second line           # type
+<Esc>
+:wq
 \`\`\`
-vi procurement.log
-G                  " jump to the last line
-?FAILED<Enter>     " cursor jumps UP to the most recent FAILED entry
-n                  " keep going further back through earlier FAILED entries
-N                  " reverse — go forward again
-\`\`\`
 
-Tip: in last-line mode, your search history is shared between \`/\` and \`?\`. Press \`/\` and then \`Up Arrow\` to recall previous patterns regardless of which direction you used.`,
-        taskPrompt: `A long log file \`procurement.log\` is sitting in the sandbox. Open it with \`vi procurement.log\`.
+The file now has two lines.`,
+        taskPrompt: `Open \`notes.txt\` with \`vi notes.txt\`. It already has one line in it.
 
-The cursor lands at the bottom (or jump there yourself with \`G\`). There are several lines starting with \`FAILED\`. Your task:
+Your job: use \`o\` (lowercase) to add a brand new line *below* the existing one. Type exactly: \`done\` on that new line. Then \`Esc\` and \`:wq\` to save.
 
-1. Use **backward search** (\`?FAILED\`) to jump to the FAILED line closest to the bottom of the file.
-2. Delete just that one line with \`dd\`.
-3. Save and quit with \`:wq\`.
-
-Don't touch the other FAILED lines — there should still be three of them left when you're done.`,
+When finished, \`notes.txt\` should have **2 lines**, and line 2 should be the word \`done\`.`,
         setupCommands: [
-          "printf '%s\\n' 'OK supplier=A' 'OK supplier=B' 'FAILED supplier=C' 'OK supplier=D' 'FAILED supplier=E' 'OK supplier=F' 'FAILED supplier=G' 'OK supplier=H' 'FAILED supplier=I' 'OK supplier=J' > procurement.log",
+          "printf '%s\\n' 'first line' > notes.txt",
         ],
         successCriteria: [
           {
-            check_command: "wc -l < procurement.log | tr -d ' '",
-            expected_output: "9",
-            description: "procurement.log lost exactly one line",
+            check_command: "wc -l < notes.txt | tr -d ' '",
+            expected_output: "2",
+            description: "notes.txt now has 2 lines",
           },
           {
-            check_command: "grep -c '^FAILED' procurement.log | tr -d ' '",
-            expected_output: "3",
-            description: "three FAILED lines remain (down from four)",
-          },
-          {
-            check_command:
-              "grep -c '^FAILED supplier=I' procurement.log | tr -d ' '",
-            expected_output: "0",
-            description:
-              "the last FAILED entry (supplier=I) is the one that got removed",
+            check_command: "sed -n '2p' notes.txt",
+            expected_output: "done",
+            description: "line 2 is the word 'done'",
           },
         ],
       },
       {
-        id: "vi_3_command_mode",
+        id: "vi_03_hjkl",
         order: 3,
-        title: "Last-Line (Command) Mode",
-        explanation: `When you press \`:\` in Normal mode the cursor jumps to the very bottom of the screen and you can type a **command by name**. This is *last-line mode* — older books call it *ex mode* or *command mode*. Same thing.
+        title: "Moving the cursor with h j k l",
+        explanation: `In Normal mode, vi uses four letters on your home row to move the cursor:
 
-You already use it for \`:w\`, \`:q\`, \`:wq\`, \`:q!\`, and \`:%s/old/new/g\`. Here are the ones worth knowing next:
+- \`h\` — left
+- \`j\` — down
+- \`k\` — up
+- \`l\` — right
 
-- \`:set number\` — show line numbers in the gutter. \`:set nonumber\` to turn off.
-- \`:e <filename>\` — open another file in the same vim session (\`Tab\` completes filenames).
-- \`:r <filename>\` — **read** another file's contents into the current buffer at the cursor.
-- \`:r !<command>\` — run a shell command and insert its **output** at the cursor. Cracking useful.
-- \`:!<command>\` — run a shell command and show its output, without inserting anything.
-- \`:help <topic>\` — open the built-in help. \`:q\` closes the help window.
+That's left, down, up, right (think of \`j\` as the one with a hook going down, and \`k\` as the one going up).
 
-A few quality-of-life points:
+The arrow keys also work. But \`h j k l\` are quicker once your fingers learn them, because your hands never leave the home row. (Bill Joy's keyboard in 1976 didn't even have arrow keys, so this layout stuck.)
 
-- Tab-completion works for filenames and commands (\`:e su<Tab>\` cycles through matches).
-- The \`Up Arrow\` recalls previous commands — your command history is persistent.
-- Many commands take a **range**: \`:5,10d\` deletes lines 5 through 10. \`:%\` means the whole file (that's what the \`%\` in \`:%s/.../...\` is).`,
-        example: `Inserting today's date as a new line, without leaving vim:
+**Important**: \`h j k l\` only move the cursor in **Normal mode**. If you're in Insert mode, pressing \`h\` types the letter h instead. Press \`Esc\` first to be sure.`,
+        example: `Once vi is open:
 
 \`\`\`
-G                 " jump to the bottom
-o                 " open a new line below in Insert mode
-<Esc>             " back to Normal
-:r !date<Enter>   " insert the output of \`date\` right where the cursor is
-\`\`\`
-
-Or peeking at another file without opening it:
-
-\`\`\`
-:!cat /etc/hostname    " runs the command, shows the output, returns you to vim
-\`\`\`
-
-Or pulling a list of files into the document you're editing:
-
-\`\`\`
-:r !ls -1 inventory/   " inserts each filename on its own line
+<Esc>          # make sure you're in Normal mode
+jjjj           # down 4 lines
+ll             # right 2 characters
+k              # up 1 line
 \`\`\``,
-        taskPrompt: `A file \`report.txt\` exists with a single header line. An \`inventory/\` directory next to it contains three CSV files.
+        taskPrompt: `Open \`target.txt\` with \`vi target.txt\`. It has 5 short lines. Line 4 looks like: \`leftXright\`.
 
-Your task — using **last-line mode**, no other tools:
+Your job: use \`j\` to move the cursor *down* to line 4, then use \`l\` to move *right* until the cursor is on the \`X\`, then press \`x\` (lowercase) to delete just that one character.
 
-1. Open the file: \`vi report.txt\`.
-2. Move the cursor to the end of the file (\`G\` then \`$\`, or just \`G\`).
-3. Run \`:r !ls -1 inventory/\` to insert the list of inventory files **below** the header. (The \`-1\` forces one filename per line.)
-4. Save and quit with \`:wq\`.
-
-When you're done, \`report.txt\` should have the original header on line 1 and the three CSV filenames on lines 2, 3, 4.`,
+Save with \`:wq\`. Line 4 should end up as \`leftright\` (no X).`,
         setupCommands: [
-          "rm -rf inventory report.txt",
-          "mkdir -p inventory",
-          "touch inventory/beans.csv inventory/flour.csv inventory/maize.csv",
-          "printf '%s\\n' 'StockTrace inventory listing:' > report.txt",
+          "printf '%s\\n' 'line one' 'line two' 'line three' 'leftXright' 'line five' > target.txt",
         ],
         successCriteria: [
           {
-            check_command: "wc -l < report.txt | tr -d ' '",
-            expected_output: "4",
-            description: "report.txt has 4 lines (header + 3 filenames)",
+            check_command: "wc -l < target.txt | tr -d ' '",
+            expected_output: "5",
+            description: "no whole lines were removed",
           },
           {
-            check_command: "head -1 report.txt",
-            expected_output: "StockTrace inventory listing:",
-            description: "the header is still on line 1",
+            check_command: "sed -n '4p' target.txt",
+            expected_output: "leftright",
+            description: "line 4 is now 'leftright' (the X is gone)",
+          },
+        ],
+      },
+      {
+        id: "vi_04_jumping",
+        order: 4,
+        title: "Jumping around — 0, $, gg, G",
+        explanation: `Walking one character at a time is slow. These four jumps save you loads of presses:
+
+- \`0\` (the digit zero) — jump to the **start of the current line**.
+- \`$\` (dollar sign) — jump to the **end of the current line**.
+- \`gg\` — jump to the **first line** of the file.
+- \`G\` (capital) — jump to the **last line** of the file.
+
+Bonus: type a number before \`G\` to jump to that line. \`5G\` goes to line 5. \`42G\` goes to line 42.
+
+These all work in Normal mode. As always, \`Esc\` first if you're not sure.`,
+        example: `\`\`\`
+gg            # go to the top of the file
+G             # go to the bottom of the file
+0             # go to the start of this line
+$             # go to the end of this line
+5G            # go to line 5
+\`\`\``,
+        taskPrompt: `Open \`recipe.txt\` with \`vi recipe.txt\`. It has 3 lines.
+
+Your job:
+
+1. Press \`G\` to jump to the **last line**.
+2. Press \`0\` to make sure the cursor is at the **start** of that line.
+3. Press \`i\` to enter Insert mode and type \`END \` (the word END followed by a space).
+4. Press \`Esc\` then \`:wq\` to save.
+
+The last line should now begin with \`END \` followed by what was already there. The file should still have **3 lines** in total.`,
+        setupCommands: [
+          "printf '%s\\n' 'Step 1: heat oil' 'Step 2: add onions' 'Step 3: stir' > recipe.txt",
+        ],
+        successCriteria: [
+          {
+            check_command: "wc -l < recipe.txt | tr -d ' '",
+            expected_output: "3",
+            description: "recipe.txt still has 3 lines",
+          },
+          {
+            check_command: "tail -1 recipe.txt",
+            expected_output: "END Step 3: stir",
+            description: "the last line now starts with 'END '",
+          },
+        ],
+      },
+      {
+        id: "vi_05_delete",
+        order: 5,
+        title: "Removing things — x and dd",
+        explanation: `Two simple delete keys, used constantly:
+
+- \`x\` — delete the **single character** under the cursor. Like a backspace, but it deletes the character the cursor is *on*, not the one before it.
+- \`dd\` — delete the **whole line** the cursor is on. Press \`d\` twice quickly.
+
+Both put what you deleted onto a hidden clipboard, so you can paste it back somewhere else with \`p\` (you'll learn \`p\` in the next lesson).
+
+If you delete the wrong thing, don't worry — you'll learn undo (\`u\`) in lesson 7.`,
+        example: `\`\`\`
+x             # delete the character under the cursor
+xxx           # delete three characters in a row
+dd            # delete the entire current line
+\`\`\``,
+        taskPrompt: `Open \`prices.txt\` with \`vi prices.txt\`. It has 4 lines, and line 3 is exactly \`DELETE THIS LINE\`.
+
+Your job: move to line 3 (\`gg\` then \`jj\`, or \`3G\`), then press \`dd\` to delete that whole line.
+
+Save with \`:wq\`. The file should end up with **3 lines** and contain no \`DELETE THIS LINE\` text.`,
+        setupCommands: [
+          "printf '%s\\n' 'Maize: 500 RWF' 'Beans: 800 RWF' 'DELETE THIS LINE' 'Flour: 1200 RWF' > prices.txt",
+        ],
+        successCriteria: [
+          {
+            check_command: "wc -l < prices.txt | tr -d ' '",
+            expected_output: "3",
+            description: "prices.txt has 3 lines (one removed)",
+          },
+          {
+            check_command: "grep -c 'DELETE THIS LINE' prices.txt | tr -d ' '",
+            expected_output: "0",
+            description: "the 'DELETE THIS LINE' line is gone",
+          },
+        ],
+      },
+      {
+        id: "vi_06_yank_paste",
+        order: 6,
+        title: "Copy and paste lines — yy and p",
+        explanation: `Vi calls "copy" **yank**. (Don't ask why — that's just the word it uses.)
+
+- \`yy\` — yank (copy) the current line onto the clipboard.
+- \`p\` — paste below the cursor.
+
+Move somewhere else, press \`p\`, and the copied line appears on a new line below you.
+
+Cool bit: \`p\` also pastes whatever you last *deleted*. So \`dd\` then move then \`p\` is the vi version of "cut and paste".`,
+        example: `\`\`\`
+yy            # copy the current line
+G             # jump to the last line
+p             # paste a copy below
+\`\`\``,
+        taskPrompt: `Open \`team.txt\` with \`vi team.txt\`. It has 3 lines, and line 2 is \`Nissi\`.
+
+Your job:
+
+1. Move to line 2 (where \`Nissi\` is). \`gg\` then \`j\`, or just \`2G\`.
+2. Press \`yy\` to copy that line.
+3. Press \`G\` to jump to the bottom.
+4. Press \`p\` to paste a copy after the last line.
+5. Save with \`:wq\`.
+
+The file should have **4 lines** total, and \`Nissi\` should appear twice (once on line 2, once on the new last line).`,
+        setupCommands: [
+          "printf '%s\\n' 'Team:' 'Nissi' 'Alex' > team.txt",
+        ],
+        successCriteria: [
+          {
+            check_command: "wc -l < team.txt | tr -d ' '",
+            expected_output: "4",
+            description: "team.txt has 4 lines now",
+          },
+          {
+            check_command: "grep -c '^Nissi$' team.txt | tr -d ' '",
+            expected_output: "2",
+            description: "'Nissi' appears on exactly 2 lines",
+          },
+        ],
+      },
+      {
+        id: "vi_07_undo",
+        order: 7,
+        title: "Undo with u",
+        explanation: `Made a mistake? Press \`u\` in Normal mode. The last change disappears.
+
+- \`u\` — undo the last change. Keep pressing it to undo further back.
+- \`Ctrl-r\` — **redo**. Bring back what you just undid.
+
+That's the whole lesson — one key. Use it freely. There's no harm in undoing too much; you can always redo with \`Ctrl-r\`.`,
+        example: `\`\`\`
+dd            # oh no, deleted the wrong line
+u             # undid — line is back
+u             # undo the change before that
+<Ctrl-r>      # actually that one was fine, bring it back
+\`\`\``,
+        taskPrompt: `Open \`precious.txt\` with \`vi precious.txt\`. It has 3 lines. Line 2 is \`KEEP THIS\`.
+
+Practise undo:
+
+1. Move to line 2.
+2. Press \`dd\` to delete it (just for practice).
+3. Now press \`u\` to bring it back.
+4. Save with \`:wq\`.
+
+The file should still have **3 lines** and still contain \`KEEP THIS\` exactly as it was.`,
+        setupCommands: [
+          "printf '%s\\n' 'first' 'KEEP THIS' 'third' > precious.txt",
+        ],
+        successCriteria: [
+          {
+            check_command: "wc -l < precious.txt | tr -d ' '",
+            expected_output: "3",
+            description: "precious.txt still has 3 lines",
+          },
+          {
+            check_command: "grep -c '^KEEP THIS$' precious.txt | tr -d ' '",
+            expected_output: "1",
+            description: "'KEEP THIS' is still in the file",
+          },
+        ],
+      },
+      {
+        id: "vi_08_visual",
+        order: 8,
+        title: "Selecting regions — visual mode (v and V)",
+        explanation: `\`yy\` and \`dd\` work on whole lines. But sometimes you only want to copy or delete **part of a line** or a chunk of several lines. That's what **visual mode** is for: highlight first, then act.
+
+- \`v\` — start a character-by-character selection. Move with \`h j k l\` (or \`w\` for next word, \`$\` for end of line). The text you cover gets highlighted.
+- \`V\` (capital) — start a line-by-line selection. Move up or down to grab whole lines.
+
+Once something is highlighted, these keys act on the selection:
+
+- \`d\` — delete it.
+- \`y\` — copy (yank) it.
+- \`c\` — delete it **and** drop you into Insert mode (handy for replacing).
+
+Press \`Esc\` to cancel a selection without doing anything.`,
+        example: `To capitalise \`goodTaste\` to \`Good Taste\` in one move:
+
+\`\`\`
+(cursor on the 'g' of goodTaste)
+v             # start selection
+e             # extend to the end of the word
+c             # delete and enter Insert mode
+Good Taste    # type the replacement
+<Esc>
+\`\`\``,
+        taskPrompt: `Open \`places.txt\` with \`vi places.txt\`. Line 1 is \`goodTaste in Kigali\`.
+
+Your job: use **visual mode** to change just the word \`goodTaste\` into \`Good Taste\`.
+
+Step by step:
+
+1. \`gg\` then \`0\` to land on the very first character (the \`g\`).
+2. \`v\` to start a selection.
+3. \`e\` to extend the selection to the end of the word.
+4. \`c\` to delete the selection and start typing.
+5. Type \`Good Taste\`, then \`Esc\`.
+6. \`:wq\` to save.
+
+Line 1 should end up as \`Good Taste in Kigali\` (capital G, space, capital T). Line 2 should be untouched.`,
+        setupCommands: [
+          "printf '%s\\n' 'goodTaste in Kigali' 'serves food daily' > places.txt",
+        ],
+        successCriteria: [
+          {
+            check_command: "wc -l < places.txt | tr -d ' '",
+            expected_output: "2",
+            description: "places.txt still has 2 lines",
+          },
+          {
+            check_command: "head -1 places.txt",
+            expected_output: "Good Taste in Kigali",
+            description: "line 1 is now 'Good Taste in Kigali'",
+          },
+          {
+            check_command: "sed -n '2p' places.txt",
+            expected_output: "serves food daily",
+            description: "line 2 is unchanged",
+          },
+        ],
+      },
+      {
+        id: "vi_09_search",
+        order: 9,
+        title: "Searching — / forward and ? backward",
+        explanation: `To find text in a file:
+
+- \`/word\` then Enter — search **forward** (towards the bottom). The cursor jumps to the next match.
+- \`?word\` then Enter — search **backward** (towards the top).
+- \`n\` — repeat the last search in the **same** direction.
+- \`N\` — repeat in the **opposite** direction.
+
+So if you press \`/error\`, then \`n\` keeps going down to find more \`error\` matches. If you press \`?error\`, then \`n\` keeps going **up**.
+
+When should you use \`?\` instead of \`/\`? When the thing you're looking for is **above** the cursor. That's the whole rule.`,
+        example: `\`\`\`
+/Kigali       # search forward for 'Kigali'
+n             # next match (still forward)
+?TODO         # search backward for 'TODO'
+n             # next match (now backward)
+N             # one match the other way (forward)
+\`\`\``,
+        taskPrompt: `Open \`orders.txt\` with \`vi orders.txt\`. It has 7 lines. The cursor lands at the bottom. There are 3 lines that start with \`URGENT\`.
+
+Your job: use **backward search** (\`?URGENT\`) to jump to the URGENT line **closest to the bottom**, then delete that single line with \`dd\`.
+
+Save with \`:wq\`. After: the file should have **6 lines**, and only **2** of them should start with \`URGENT\`.`,
+        setupCommands: [
+          "printf '%s\\n' 'order 1: maize' 'URGENT order 2: beans' 'order 3: rice' 'URGENT order 4: oil' 'order 5: salt' 'URGENT order 6: tea' 'order 7: sugar' > orders.txt",
+        ],
+        successCriteria: [
+          {
+            check_command: "wc -l < orders.txt | tr -d ' '",
+            expected_output: "6",
+            description: "orders.txt has 6 lines (one removed)",
+          },
+          {
+            check_command: "grep -c '^URGENT' orders.txt | tr -d ' '",
+            expected_output: "2",
+            description: "2 URGENT lines remain (down from 3)",
+          },
+          {
+            check_command: "grep -c '^URGENT order 6' orders.txt | tr -d ' '",
+            expected_output: "0",
+            description: "the last URGENT entry (order 6) is the one removed",
+          },
+        ],
+      },
+      {
+        id: "vi_10_commands",
+        order: 10,
+        title: "Commands by name — the : prompt",
+        explanation: `Press \`:\` in Normal mode and the cursor jumps to the **very bottom** of the screen so you can type a **command by name**. This area is called **last-line mode** (some old books call it command mode or ex mode — same thing).
+
+You already use \`:w\` (write), \`:q\` (quit), and \`:wq\` (write and quit). Three more that come up daily:
+
+- \`:set number\` — show line numbers down the left. \`:set nonumber\` to hide them.
+- \`:%s/old/new/g\` — find every \`old\` in the whole file and replace it with \`new\`. The \`%\` means "the whole file"; the \`g\` means "every match on each line".
+- \`:r !command\` — run a shell command and **paste its output** into your file at the cursor. e.g. \`:r !date\` inserts today's date as a new line.
+
+Press Enter after typing a command. Tab-completion works for filenames.`,
+        example: `Rename every \`Place\` to \`City\` everywhere in the file:
+
+\`\`\`
+:%s/Place/City/g
+\`\`\`
+
+Insert the current date at the bottom of a log:
+
+\`\`\`
+G              # go to last line
+:r !date       # output of \`date\` is pasted below the current line
+\`\`\``,
+        taskPrompt: `Open \`log.txt\` with \`vi log.txt\`. It has 3 lines, and each one contains the word \`MAIZE\` in all caps.
+
+Your job: use **one** \`:%s\` command to replace every \`MAIZE\` with \`maize\` (lowercase).
+
+\`\`\`
+:%s/MAIZE/maize/g
+\`\`\`
+
+Then \`:wq\` to save. After: the file should contain zero \`MAIZE\` (all-caps) and three \`maize\` (lowercase).`,
+        setupCommands: [
+          "printf '%s\\n' '50kg MAIZE in stock' 'shipped: MAIZE x 10' 'price of MAIZE: 500 RWF' > log.txt",
+        ],
+        successCriteria: [
+          {
+            check_command: "grep -c 'MAIZE' log.txt | tr -d ' '",
+            expected_output: "0",
+            description: "no all-caps MAIZE remains",
+          },
+          {
+            check_command: "grep -c 'maize' log.txt | tr -d ' '",
+            expected_output: "3",
+            description: "three lowercase 'maize' are present",
+          },
+          {
+            check_command: "wc -l < log.txt | tr -d ' '",
+            expected_output: "3",
+            description: "still 3 lines",
+          },
+        ],
+      },
+      {
+        id: "vi_11_stocktrace_project",
+        order: 11,
+        title: "Project — your StockTrace supplier ledger",
+        explanation: `Time to use everything together to build something real for your StockTrace project.
+
+StockTrace is your procurement system for Rwandan restaurants. It needs a supplier ledger — a CSV file listing who supplies what to which restaurant. You're going to type that file from scratch in vi.
+
+You can use **anything** you've learned so far:
+
+- \`i\` to type, \`Esc\` to stop typing.
+- \`o\` to open a new line below.
+- \`h j k l\`, \`gg\`, \`G\`, \`0\`, \`$\` to move around.
+- \`x\`, \`dd\` to remove mistakes.
+- \`yy\`, \`p\` to copy a similar row instead of retyping.
+- \`u\` to undo if you slip.
+- \`v\`, \`V\`, \`c\` for selections.
+- \`/\`, \`?\` if you need to find something.
+- \`:%s/old/new/g\` to fix typos everywhere at once.
+- \`:wq\` to save.
+
+There's no single right path — get the file to the expected end state, however you like.`,
+        example: `A small CSV looks like this — a header row first, then one row per record, with values separated by commas:
+
+\`\`\`
+name,city,product
+Good Taste,Kigali,maize
+\`\`\`
+
+Tip: if two rows look almost the same, \`yy\` + \`p\` then tweak the copy is faster than typing it fresh.`,
+        taskPrompt: `Create a new file called \`suppliers.csv\` (run \`vi suppliers.csv\`) containing **exactly these 5 lines, in this order**:
+
+\`\`\`
+name,city,product
+Good Taste,Kigali,maize
+Cafe Neo,Kigali,coffee
+Heaven Restaurant,Kigali,rice
+Fair Food,Musanze,beans
+\`\`\`
+
+Then add a **6th line** that begins with \`Last updated:\` (it can be followed by anything — a date, your name, whatever). For example: \`Last updated: 2026-05-12\`.
+
+Save with \`:wq\`. When you're done, the file should have **6 lines** total.
+
+Hints:
+- Open with \`vi suppliers.csv\` — the file doesn't exist yet, vi will create it on save.
+- After \`i\` you can type all 6 lines at once; press Enter at the end of each line.
+- If you mistype a supplier name, \`:%s/wrong/right/g\` fixes every occurrence at once.`,
+        setupCommands: [
+          "rm -f suppliers.csv",
+        ],
+        successCriteria: [
+          {
+            check_command: "wc -l < suppliers.csv | tr -d ' '",
+            expected_output: "6",
+            description: "suppliers.csv has exactly 6 lines",
+          },
+          {
+            check_command: "head -1 suppliers.csv",
+            expected_output: "name,city,product",
+            description: "line 1 is the CSV header",
           },
           {
             check_command:
-              "grep -c '\\.csv$' report.txt | tr -d ' '",
-            expected_output: "3",
-            description: "three .csv filenames were inserted from inventory/",
+              "grep -c '^Good Taste,Kigali,maize$\\|^Cafe Neo,Kigali,coffee$\\|^Heaven Restaurant,Kigali,rice$\\|^Fair Food,Musanze,beans$' suppliers.csv | tr -d ' '",
+            expected_output: "4",
+            description: "all 4 supplier rows are present and match exactly",
+          },
+          {
+            check_command: "grep -c '^Last updated:' suppliers.csv | tr -d ' '",
+            expected_output: "1",
+            description: "the final 'Last updated:' line is there",
           },
         ],
       },
