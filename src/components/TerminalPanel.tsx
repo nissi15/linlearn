@@ -7,37 +7,41 @@ import "@xterm/xterm/css/xterm.css";
 interface TerminalPanelProps {
   progressId: string;
   visible: boolean;
+  onDone?: () => void;
+  donePending?: boolean;
 }
 
 // A dark, Ubuntu-ish 16-colour palette so ANSI output (ls, git, prompts, …)
 // renders with proper colours instead of leaking raw escape codes.
 const THEME = {
-  background: "#08111f",
-  foreground: "#dbeafe",
-  cursor: "#60a5fa",
-  cursorAccent: "#08111f",
-  selectionBackground: "#1e3a5f",
-  black: "#1e293b",
-  red: "#f87171",
-  green: "#4ade80",
-  yellow: "#fbbf24",
-  blue: "#60a5fa",
-  magenta: "#c084fc",
-  cyan: "#22d3ee",
-  white: "#e2e8f0",
-  brightBlack: "#64748b",
-  brightRed: "#fca5a5",
-  brightGreen: "#86efac",
-  brightYellow: "#fde047",
-  brightBlue: "#93c5fd",
-  brightMagenta: "#d8b4fe",
-  brightCyan: "#67e8f9",
-  brightWhite: "#f8fafc",
+  background: "#060706",
+  foreground: "#f3f1e8",
+  cursor: "#ff5a1f",
+  cursorAccent: "#060706",
+  selectionBackground: "#3d4038",
+  black: "#111211",
+  red: "#ff6464",
+  green: "#76f06a",
+  yellow: "#d8c36b",
+  blue: "#9aa8a2",
+  magenta: "#b8a7a0",
+  cyan: "#9fb9ac",
+  white: "#f3f1e8",
+  brightBlack: "#737067",
+  brightRed: "#ff8a63",
+  brightGreen: "#a2ff95",
+  brightYellow: "#ffe28a",
+  brightBlue: "#c6d4cf",
+  brightMagenta: "#d4c2bc",
+  brightCyan: "#c3ded1",
+  brightWhite: "#ffffff",
 };
 
 export default function TerminalPanel({
   progressId,
   visible,
+  onDone,
+  donePending = false,
 }: TerminalPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -150,24 +154,36 @@ export default function TerminalPanel({
 
   return (
     <div className="h-full min-h-0 flex flex-col">
-      <div className="px-4 py-2 border-b border-[var(--border)] bg-[var(--panel)] flex items-center gap-2">
+      <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2 bg-black/10">
         <div
-          className={`w-3 h-3 rounded-full ${
+          className={`w-3 h-3 ${
             connected ? "bg-[var(--success)]" : "bg-[var(--warning)]"
           }`}
         />
-        <span className="text-xs font-semibold text-[var(--foreground)]/70 uppercase tracking-wider">
+        <span className="obsidian-label">
           Terminal
         </span>
-        <span className="ml-auto text-[10px] text-[var(--foreground)]/35">
-          click and type — it&apos;s a real shell
-        </span>
+        <div className="ml-auto flex items-center gap-3">
+          <span className="hidden xl:inline text-[10px] uppercase text-[var(--foreground)]/35">
+            click and type - it&apos;s a real shell
+          </span>
+          {onDone && (
+            <button
+              type="button"
+              onClick={onDone}
+              disabled={donePending}
+              className="obsidian-action obsidian-label obsidian-success shrink-0 px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {donePending ? "Checking..." : "Done"}
+            </button>
+          )}
+        </div>
       </div>
 
       <div
         ref={containerRef}
         onClick={() => termRef.current?.focus()}
-        className="flex-1 min-h-0 overflow-hidden bg-[#08111f] p-2 cursor-text"
+        className="flex-1 min-h-0 overflow-hidden bg-[#060706]/95 p-3 cursor-text"
       />
     </div>
   );

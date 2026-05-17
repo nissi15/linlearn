@@ -39,12 +39,17 @@ export default async function Home() {
   });
 
   return (
-    <div className="min-h-screen p-8">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-[var(--accent)] mb-2">
-          Linux Tutor
+    <div className="obsidian-screen min-h-screen p-8">
+      <span className="obsidian-ambient" aria-hidden="true" />
+      <span className="obsidian-corner obsidian-corner-tl" aria-hidden="true" />
+      <span className="obsidian-corner obsidian-corner-tr" aria-hidden="true" />
+      <span className="obsidian-corner obsidian-corner-bl" aria-hidden="true" />
+      <span className="obsidian-corner obsidian-corner-br" aria-hidden="true" />
+      <div className="max-w-4xl mx-auto pt-16">
+        <h1 className="obsidian-label text-5xl font-black tracking-normal mb-4">
+          LINLEARN
         </h1>
-        <p className="text-[var(--foreground)]/60 mb-8">
+        <p className="obsidian-muted mb-10 max-w-2xl text-sm uppercase">
           Master Linux concepts through guided lessons with hands-on practice.
         </p>
 
@@ -65,26 +70,26 @@ export default async function Home() {
             return (
               <div
                 key={topic.id}
-                className="bg-[var(--panel)] border border-[var(--border)] rounded-xl p-6"
+                className="obsidian-panel-strong p-6"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-[var(--foreground)]">
+                    <h2 className="obsidian-label text-lg">
                       {topic.name}
                     </h2>
-                    <p className="text-sm text-[var(--foreground)]/60 mt-1">
+                    <p className="text-sm text-[var(--foreground)]/58 mt-2">
                       {topic.description}
                     </p>
                   </div>
-                  <span className="text-xs text-[var(--foreground)]/40 font-mono shrink-0 ml-4">
+                  <span className="text-xs text-[var(--foreground)]/42 shrink-0 ml-4">
                     {completedCount}/{totalCount}
                   </span>
                 </div>
 
                 {/* Progress bar */}
-                <div className="w-full h-1.5 bg-[var(--border)] rounded-full mb-4">
+                <div className="w-full h-1.5 bg-black/30 mb-4">
                   <div
-                    className="h-full bg-[var(--success)] rounded-full transition-all"
+                    className="h-full bg-[var(--success)] transition-all"
                     style={{ width: `${progressPct}%` }}
                   />
                 </div>
@@ -101,15 +106,15 @@ export default async function Home() {
                         className="flex items-center gap-3 text-sm"
                       >
                         {status === "completed" ? (
-                          <div className="w-4 h-4 rounded-full bg-[var(--success)] flex items-center justify-center shrink-0">
+                          <div className="w-4 h-4 bg-[var(--success)] flex items-center justify-center shrink-0">
                             <span className="text-[var(--background)] text-[10px] font-bold">
                               &#10003;
                             </span>
                           </div>
                         ) : status === "in-progress" ? (
-                          <div className="w-4 h-4 rounded-full bg-[var(--accent)] animate-pulse shrink-0" />
+                          <div className="w-4 h-4 bg-[var(--warning)] animate-pulse shrink-0" />
                         ) : (
-                          <div className="w-4 h-4 rounded-full bg-[var(--border)] shrink-0" />
+                          <div className="w-4 h-4 bg-[var(--border)] shrink-0" />
                         )}
                         <span
                           className={
@@ -135,7 +140,7 @@ export default async function Home() {
                   <input type="hidden" name="topicId" value={topic.id} />
                   <button
                     type="submit"
-                    className="bg-[var(--accent)] text-[var(--background)] font-semibold px-5 py-2 rounded-lg text-sm hover:bg-[var(--accent-dim)] transition-colors cursor-pointer"
+                    className="obsidian-action obsidian-label obsidian-primary px-5 py-2 text-sm cursor-pointer"
                   >
                     {completedCount === totalCount
                       ? "Review"

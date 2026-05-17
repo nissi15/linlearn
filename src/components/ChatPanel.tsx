@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
+import { playClickSound, playTutorSound } from "@/lib/sound";
 
 interface Turn {
   id: string;
@@ -24,6 +25,8 @@ interface ChatPanelProps {
   turns: Turn[];
   /** Append a new turn to the parent's list. */
   onAppendTurn: (turn: Turn) => void;
+  /** Shows a tutor-side checking indicator for work submitted outside chat. */
+  externalPendingLabel?: string | null;
   /** Optional placeholder for the input box (defaults to a generic prompt). */
   placeholder?: string;
 }
@@ -35,6 +38,7 @@ export default function ChatPanel({
   onDone,
   turns,
   onAppendTurn,
+  externalPendingLabel,
   placeholder,
 }: ChatPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -60,10 +64,10 @@ export default function ChatPanel({
   }, [turns]);
 
   useEffect(() => {
-    if (pending) {
+    if (pending || externalPendingLabel) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     }
-  }, [pending]);
+  }, [externalPendingLabel, pending]);
 
   const send = async (message: string) => {
     if (!message.trim() || pending) return;
@@ -71,6 +75,8 @@ export default function ChatPanel({
     const trimmed = message.trim();
     if (inputRef.current) inputRef.current.value = "";
     draftStore.delete(progressId);
+
+    playClickSound();
 
     onAppendTurn({
       id: `student-${Date.now()}`,
@@ -103,6 +109,8 @@ export default function ChatPanel({
 
       const result = (await res.json()) as AdvanceResult;
 
+      playTutorSound();
+
       onAppendTurn({
         id: `tutor-${Date.now()}`,
         role: "tutor",
@@ -130,12 +138,16 @@ export default function ChatPanel({
     if (pending) return;
     setPending(true);
 
+    playClickSound();
+
     try {
       const res = await fetch(`/api/lesson/${progressId}/hint`, {
         method: "POST",
       });
       if (!res.ok) throw new Error(`Hint request failed: ${res.status}`);
       const data = await res.json();
+
+      playTutorSound();
 
       onAppendTurn({
         id: `hint-${Date.now()}`,
@@ -162,32 +174,46 @@ export default function ChatPanel({
             }`}
           >
             <div
-              className={`max-w-[85%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
+              className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed backdrop-blur-md ${
                 t.role === "student"
-                  ? "bg-[var(--accent-dim)] text-white"
-                  : "bg-[var(--panel)] border border-[var(--border)] text-[var(--foreground)]"
+                  ? "border border-[var(--warning)]/45 bg-[var(--warning)]/18 text-[var(--foreground)]"
+                  : "border border-[var(--border)] bg-white/7 text-[var(--foreground)]"
+              } ${
+                i === turns.length - 1 && t.role !== "student"
+                  ? "obsidian-reply-complete fx-tutor-response"
+                  : ""
               }`}
             >
               <div className="whitespace-pre-wrap">{t.content}</div>
             </div>
           </div>
         ))}
-        {pending && (
+        {(pending || externalPendingLabel) && (
           <div className="flex justify-start">
-            <div className="bg-[var(--panel)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm">
-              <span className="inline-flex gap-1">
-                <span className="animate-bounce">.</span>
-                <span
-                  className="animate-bounce"
-                  style={{ animationDelay: "0.1s" }}
-                >
-                  .
-                </span>
-                <span
-                  className="animate-bounce"
-                  style={{ animationDelay: "0.2s" }}
-                >
-                  .
+            <div
+              className="border border-[var(--border)] bg-white/7 px-4 py-3 text-sm text-[var(--foreground)] backdrop-blur-md"
+              aria-live="polite"
+            >
+              <span className="inline-flex items-center gap-2">
+                {externalPendingLabel && (
+                  <span className="text-[var(--foreground)]/70">
+                    {externalPendingLabel}
+                  </span>
+                )}
+                <span className="inline-flex gap-1">
+                  <span className="animate-bounce">.</span>
+                  <span
+                    className="animate-bounce"
+                    style={{ animationDelay: "0.1s" }}
+                  >
+                    .
+                  </span>
+                  <span
+                    className="animate-bounce"
+                    style={{ animationDelay: "0.2s" }}
+                  >
+                    .
+                  </span>
                 </span>
               </span>
             </div>
@@ -196,12 +222,12 @@ export default function ChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t border-[var(--border)] p-4 flex gap-3">
+      <div className="border-t border-[var(--border)] p-4 flex gap-3 bg-black/10">
         <button
           type="button"
           onClick={requestHint}
           disabled={pending}
-          className="text-xs text-[var(--foreground)]/50 hover:text-[var(--accent)] border border-[var(--border)] rounded-lg px-3 py-2.5 transition-colors disabled:opacity-40"
+          className="obsidian-action obsidian-label border border-[var(--border)] px-3 py-2.5 text-[10px] text-[var(--foreground)]/55 hover:bg-white/6 hover:text-[var(--accent)] disabled:opacity-40"
         >
           Need a hint?
         </button>
@@ -217,7 +243,7 @@ export default function ChatPanel({
           placeholder={
             placeholder ?? 'Type "done" when finished, or ask a question...'
           }
-          className="flex-1 bg-[var(--panel)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--foreground)]/40 focus:outline-none focus:border-[var(--accent)] disabled:opacity-40"
+          className="flex-1 border border-[var(--border)] bg-black/20 px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--foreground)]/34 focus:outline-none focus:border-[var(--accent)] disabled:opacity-40"
         />
         <button
           type="button"
@@ -225,7 +251,7 @@ export default function ChatPanel({
             if (inputRef.current) void send(inputRef.current.value);
           }}
           disabled={pending}
-          className="bg-[var(--accent)] text-[var(--background)] font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-[var(--accent-dim)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="obsidian-action obsidian-label obsidian-primary px-5 py-2.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {pending ? "Sending..." : "Send"}
         </button>
