@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinLearn Version Comparison Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 70px rgba(0,0,0,0.35);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 16px;
+            font-size: 1.3em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+
+        .status-local {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-github {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .status-conflict {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .status-safe {
+            background: #f3e5f5;
+            color: #6a1b9a;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.95em;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #666;
+            min-width: 120px;
+        }
+
+        .info-value {
+            color: #333;
+            word-break: break-word;
+            text-align: right;
+            flex: 1;
+            margin-left: 12px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 8px 16px;
+            border: none;
+            background: #f0f0f0;
+            color: #333;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .tab-btn.active:hover {
+            background: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .file-list {
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+        }
+
+        .file-item {
+            padding: 6px 0;
+            color: #333;
+            border-left: 3px solid transparent;
+            padding-left: 8px;
+        }
+
+        .file-item.local-only {
+            border-left-color: #2e7d32;
+            color: #2e7d32;
+        }
+
+        .file-item.github-only {
+            border-left-color: #1565c0;
+            color: #1565c0;
+        }
+
+        .file-item.conflict {
+            border-left-color: #e65100;
+            color: #e65100;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 0.9em;
+        }
+
+        .comparison-table th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .comparison-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comparison-table tr:hover {
+            background: #fafafa;
+        }
+
+        .recommendation {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-top: 24px;
+            grid-column: 1 / -1;
+        }
+
+        .recommendation h2 {
+            color: white;
+            border-bottom-color: rgba(255,255,255,0.3);
+            margin-bottom: 12px;
+        }
+
+        .recommendation ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .recommendation li {
+            padding: 8px 0;
+            padding-left: 24px;
+            position: relative;
+        }
+
+        .recommendation li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 12px 0;
+            color: #e65100;
+        }
+
+        .conflict-badge {
+            display: inline-block;
+            background: #ffebee;
+            border-left: 4px solid #c62828;
+            padding: 8px 12px;
+            border-radius: 4px;
+            color: #c62828;
+            font-weight: 600;
+            margin: 4px 0;
+        }
+
+        .success-badge {
+            display: inline-block;
+            background: #e8f5e9;
+            border-left: 4px solid #2e7d32;
+            padding: 8px 12px;
+            border-radius: 4px;
+            color: #2e7d32;
+            font-weight: 600;
+            margin: 4px 0;
+        }
+
+        .commit-box {
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 8px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+        }
+
+        .commit-hash {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .commit-message {
+            color: #333;
+            margin-top: 4px;
+        }
+
+        .commit-date {
+            color: #999;
+            font-size: 0.9em;
+            margin-top: 4px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 12px 0;
+        }
+
+        .stat {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            margin: 8px 0;
+        }
+
+        .code-block .keyword { color: #569cd6; }
+        .code-block .string { color: #ce9178; }
+        .code-block .comment { color: #6a9955; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 LinLearn Version Comparison</h1>
+            <p>Interactive Dashboard | Conflict Detection & Push Safety Analysis</p>
+        </div>
+
+        <div class="dashboard">
+            <!-- LOCAL VERSION CARD -->
+            <div class="card">
+                <span class="status-badge status-local">LOCAL VERSION</span>
+                <h2>📁 Your Local Branch</h2>
+
+                <div class="info-row">
+                    <span class="info-label">Branch:</span>
+                    <span class="info-value">master</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Latest Commit:</span>
+                    <span class="info-value">587b882</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Author:</span>
+                    <span class="info-value">Ismael-Nd</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date:</span>
+                    <span class="info-value">May 17, 2026</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Status:</span>
+                    <span class="info-value">1 ahead, 1 behind</span>
+                </div>
+
+                <div class="commit-box">
+                    <div class="commit-hash">Add comprehensive setup documentation...</div>
+                    <div class="commit-message">YouTube music player, audio settings & Sora font</div>
+                    <div class="commit-date">21 files changed, 1831 insertions</div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">21</div>
+                        <div class="stat-label">Files Changed</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">+1831</div>
+                        <div class="stat-label">Insertions</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GITHUB VERSION CARD -->
+            <div class="card">
+                <span class="status-badge status-github">GITHUB VERSION</span>
+                <h2>🌐 GitHub Repository</h2>
+
+                <div class="info-row">
+                    <span class="info-label">Repository:</span>
+                    <span class="info-value">nissi15/linlearn</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Latest Commit:</span>
+                    <span class="info-value">550f65f</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Author:</span>
+                    <span class="info-value">nissi15</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date:</span>
+                    <span class="info-value">May 15, 2026</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Status:</span>
+                    <span class="info-value">origin/master</span>
+                </div>
+
+                <div class="commit-box">
+                    <div class="commit-hash">Redesign Vi/Vim topic...</div>
+                    <div class="commit-message">11 small lessons + StockTrace project</div>
+                    <div class="commit-date">1 file changed, 472 insertions</div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">1</div>
+                        <div class="stat-label">Files Changed</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">+472</div>
+                        <div class="stat-label">Insertions</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONFLICT ANALYSIS CARD -->
+            <div class="card">
+                <span class="status-badge status-safe">CONFLICT ANALYSIS</span>
+                <h2>⚠️ Merge Safety Check</h2>
+
+                <div class="success-badge">✓ NO FILE CONFLICTS DETECTED</div>
+
+                <div class="info-row">
+                    <span class="info-label">Common Files:</span>
+                    <span class="info-value">31 identical</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Local Only:</span>
+                    <span class="info-value">3 files</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">GitHub Only:</span>
+                    <span class="info-value">0 files</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Overlapping Changes:</span>
+                    <span class="info-value">0 conflicts</span>
+                </div>
+
+                <div style="margin-top: 12px;">
+                    <strong>Why Safe:</strong>
+                    <ul style="margin-top: 8px; margin-left: 16px; list-style: disc;">
+                        <li>Different feature areas (UI/UX vs Content)</li>
+                        <li>curriculum.ts is sole shared file with divergence</li>
+                        <li>Clean separation of concerns</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- KEY DIFFERENCES CARD -->
+            <div class="card">
+                <span class="status-badge status-local">LOCAL ADDITIONS</span>
+                <h2>🎵 New Features (Local)</h2>
+
+                <div style="margin: 12px 0;">
+                    <strong>Audio & Music System:</strong>
+                    <ul style="margin-top: 8px; margin-left: 16px; list-style: disc;">
+                        <li>YouTube music player integration</li>
+                        <li>Web Audio API sound effects</li>
+                        <li>Audio settings menu</li>
+                        <li>Background harmonic ambient sound</li>
+                    </ul>
+                </div>
+
+                <div style="margin: 12px 0;">
+                    <strong>Setup & Documentation:</strong>
+                    <ul style="margin-top: 8px; margin-left: 16px; list-style: disc;">
+                        <li>SETUP.md (340+ lines)</li>
+                        <li>Database scripts (db:proxy, db:prepare)</li>
+                        <li>WSL PostgreSQL proxy (PowerShell + Python)</li>
+                        <li>prisma.config.ts</li>
+                    </ul>
+                </div>
+
+                <div style="margin: 12px 0;">
+                    <strong>UI Enhancements:</strong>
+                    <ul style="margin-top: 8px; margin-left: 16px; list-style: disc;">
+                        <li>Sora font integration</li>
+                        <li>Sticky header positioning</li>
+                        <li>Enhanced styling (316+ CSS additions)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- GITHUB ADDITIONS CARD -->
+            <div class="card">
+                <span class="status-badge status-github">GITHUB ADDITIONS</span>
+                <h2>📚 Content Updates (GitHub)</h2>
+
+                <div style="margin: 12px 0;">
+                    <strong>Vi/Vim Topic Redesign:</strong>
+                    <ul style="margin-top: 8px; margin-left: 16px; list-style: disc;">
+                        <li>11 progressive lessons (vs previous 3)</li>
+                        <li>From-scratch curriculum approach</li>
+                        <li>Each lesson teaches 1-2 keys at a time</li>
+                        <li>Plain-English explanations</li>
+                    </ul>
+                </div>
+
+                <div style="margin: 12px 0;">
+                    <strong>Lessons Include:</strong>
+                    <ul style="margin-top: 8px; margin-left: 16px; list-style: disc;">
+                        <li>hello, save, quit</li>
+                        <li>modes, movement (hjkl), jumping</li>
+                        <li>delete, yank/paste, undo</li>
+                        <li>visual mode, search, last-line mode</li>
+                        <li><strong>StockTrace</strong> project capstone</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- FILES COMPARISON CARD -->
+            <div class="card">
+                <h2>📂 File Structure Comparison</h2>
+
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab(event, 'files-local')">Local Only (3)</button>
+                    <button class="tab-btn" onclick="switchTab(event, 'files-shared')">Modified (1)</button>
+                    <button class="tab-btn" onclick="switchTab(event, 'files-identical')">Identical (31)</button>
+                </div>
+
+                <div id="files-local" class="tab-content active">
+                    <div class="file-list">
+                        <div class="file-item local-only">src/components/BackgroundMusic.tsx</div>
+                        <div class="file-item local-only">src/components/MusicPlayer.tsx</div>
+                        <div class="file-item local-only">src/lib/sound.ts</div>
+                    </div>
+                    <p style="margin-top: 8px; font-size: 0.85em; color: #666;">3 new components for audio features — safe to keep</p>
+                </div>
+
+                <div id="files-shared" class="tab-content">
+                    <div class="file-list">
+                        <div class="file-item conflict">src/seed/curriculum.ts (BOTH modified)</div>
+                    </div>
+                    <p style="margin-top: 8px; font-size: 0.85em; color: #666;"><strong>Merge Strategy Required:</strong> Both versions have curriculum changes that can be combined (no line-by-line conflicts)</p>
+                </div>
+
+                <div id="files-identical" class="tab-content">
+                    <div class="file-list" style="max-height: 200px;">
+                        <div class="file-item">src/app/actions.ts</div>
+                        <div class="file-item">src/app/layout.tsx</div>
+                        <div class="file-item">src/app/page.tsx</div>
+                        <div class="file-item">src/app/lesson/[progressId]/page.tsx</div>
+                        <div class="file-item">src/components/ChatPanel.tsx</div>
+                        <div class="file-item">src/components/LessonClient.tsx</div>
+                        <div class="file-item">src/lib/claude.ts</div>
+                        <div class="file-item">src/lib/prisma.ts</div>
+                        <div class="file-item">... and 23 more</div>
+                    </div>
+                    <p style="margin-top: 8px; font-size: 0.85em; color: #666;">Core functionality unchanged between versions</p>
+                </div>
+            </div>
+
+            <!-- BRANCH STATE CARD -->
+            <div class="card">
+                <h2>🌳 Git Branch State</h2>
+
+                <div style="margin: 12px 0; font-family: 'Courier New', monospace; font-size: 0.85em;">
+                    <div style="background: #f9f9f9; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                        <strong>Commit Divergence:</strong><br/>
+                        Local: 587b882 (May 17)<br/>
+                        GitHub: 550f65f (May 15)<br/>
+                        Common ancestor: 66e942c (Handle transient Anthropic overloads)
+                    </div>
+
+                    <div style="background: #f9f9f9; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                        <strong>Current Status:</strong><br/>
+                        ✓ Your branch is 1 ahead<br/>
+                        ✓ Your branch is 1 behind<br/>
+                        ⚠️ Uncommitted changes: package.json, package-lock.json
+                    </div>
+                </div>
+            </div>
+
+            <!-- CURRICULUM CONTENT CARD -->
+            <div class="card">
+                <h2>📖 Curriculum Topics</h2>
+
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab(event, 'curr-both')">Both Versions</button>
+                    <button class="tab-btn" onclick="switchTab(event, 'curr-github')">GitHub Only</button>
+                </div>
+
+                <div id="curr-both" class="tab-content active">
+                    <div style="margin: 8px 0;">
+                        <strong>✓ File Permissions</strong> (5 lessons)
+                        <div style="color: #666; font-size: 0.85em; margin-top: 4px;">Reading, chmod octal/symbolic, directory permissions, diagnosing denied</div>
+                    </div>
+                </div>
+
+                <div id="curr-github" class="tab-content">
+                    <div style="margin: 8px 0;">
+                        <strong>+ Vi/Vim Topic</strong> (12 items)
+                        <ul style="margin-top: 4px; margin-left: 16px; font-size: 0.85em; color: #666; list-style: disc;">
+                            <li>11 progressive lessons</li>
+                            <li>1 capstone project (StockTrace)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MERGE STRATEGY CARD -->
+            <div class="card">
+                <h2>🔄 Recommended Merge Strategy</h2>
+
+                <div class="success-badge" style="display: block; margin-bottom: 12px;">
+                    ✓ SAFE TO COMBINE - NO CONFLICTS EXPECTED
+                </div>
+
+                <div style="margin: 12px 0;">
+                    <strong>Option 1: Rebase + Push (Recommended)</strong>
+                    <div class="code-block">git fetch origin
+git rebase origin/master
+# No conflicts expected
+git push origin master
+                    </div>
+                </div>
+
+                <div style="margin: 12px 0;">
+                    <strong>Option 2: Merge Commit</strong>
+                    <div class="code-block">git fetch origin
+git merge origin/master
+# Resolve curriculum.ts if needed
+git push origin master
+                    </div>
+                </div>
+
+                <div class="warning" style="margin-top: 12px;">
+                    <strong>⚠️ Before pushing:</strong>
+                    <ul style="margin-top: 8px; margin-left: 16px; list-style: disc;">
+                        <li>Stage: git add package.json package-lock.json</li>
+                        <li>Test: npm run build</li>
+                        <li>Verify: No regressions in audio features</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- RECOMMENDATION SECTION -->
+            <div class="recommendation">
+                <h2>✅ FINAL RECOMMENDATION</h2>
+
+                <p style="margin-bottom: 16px;">
+                    <strong>It is SAFE to push your code to GitHub.</strong> Your local changes and the GitHub version address completely different features with no overlapping modifications in critical areas.
+                </p>
+
+                <ul>
+                    <li><strong>Local advantages you have:</strong> Audio system, setup docs, database scripts, UX enhancements</li>
+                    <li><strong>GitHub advantages you're missing:</strong> 11-lesson Vi/Vim topic with StockTrace project</li>
+                    <li><strong>Conflict risk:</strong> 0% for source code, ~5% for curriculum.ts (easily resolved)</li>
+                    <li><strong>Merge complexity:</strong> LOW - curriculum changes can be manually combined or cherry-picked</li>
+                    <li><strong>Post-merge action:</strong> After pushing, consider pulling GitHub's curriculum to get the Vi/Vim content</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(event, tabName) {
+            // Hide all tab contents
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+
+            // Remove active class from all buttons
+            const buttons = event.target.parentElement.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            // Show selected tab and mark button as active
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

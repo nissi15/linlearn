@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx server.ts",
+    "db:proxy": "node scripts/ensure-database.mjs",
+    "db:prepare": "node scripts/prepare-dev.mjs",
+    "predev": "node scripts/prepare-dev.mjs",
+    "dev": "node --import tsx server.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
